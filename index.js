@@ -15,16 +15,14 @@ const { authenticated } = require('./router/auth_users.js');
 const { general } = require('./router/general.js');
 
 app.use('/customer/auth', (req, res, next) => {
-  if (req.session.authorization) {
-    const token = req.session.authorization.accessToken;
-    jwt.verify(token, "fingerprint_customer", (err, decoded) => {
-      if (err) return res.status(401).json({ message: "Unauthorized" });
-      req.user = decoded;
-      next();
-    });
-  } else {
-    return res.status(401).json({ message: "Not logged in" });
-  }
+  const token = req.headers['authorization']?.split(' ')[1] || req.session.authorization?.accessToken;
+  if (!token) return res.status(401).json({ message: "Not logged in" });
+  jwt.verify(token, "fingerprint_customer", (err, decoded) => {
+    if (err) return res.status(401).json({ message: "Unauthorized" });
+    req.user = decoded;
+    req.session.authorization = { accessToken: token, username: decoded.username };
+    next();
+  });
 });
 
 app.use('/customer', authenticated);
